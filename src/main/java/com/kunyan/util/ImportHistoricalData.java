@@ -38,8 +38,8 @@ public class ImportHistoricalData {
         String userName = doc.selectSingleNode("xml/mysql/user_name").getText();
         String passWord = doc.selectSingleNode("xml/mysql/pass_word").getText();
 
-//        MyHbaseUtil myHbaseUtil = new MyHbaseUtil("hdfs://pmaster:9000/hbase","pslave1,pslave2,pslave3");
-        MyHbaseUtil myHbaseUtil = new MyHbaseUtil("hdfs://master1:9000/hbase","slave1,slave2,slave3");
+        MyHbaseUtil myHbaseUtil = new MyHbaseUtil("hdfs://pmaster:9000/hbase","pslave1,pslave2,pslave3");
+//        MyHbaseUtil myHbaseUtil = new MyHbaseUtil("hdfs://master1:9000/hbase","slave1,slave2,slave3");
         Table table1 = myHbaseUtil.getTable("news_detail");
         Table table2 = myHbaseUtil.getTable("new_news");
 
@@ -72,6 +72,8 @@ public class ImportHistoricalData {
                         if(content.equals("")){
                             content = queryHbase(table2,get);
                         }
+                    }else{
+                        content = "";
                     }
 
                     news =  new News(type,
