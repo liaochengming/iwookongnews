@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml>
+    <kafka>
+        <zookeeper>192.168.1.106:2181,192.168.1.107:2181,192.168.1.108:2181</zookeeper>
+        <groupId>two</groupId>
+        <newsreceive>new_news</newsreceive>
+        <sentiment_back>sentiment_back</sentiment_back>
+        <sentiment_send>sentiment_send</sentiment_send>
+        <brokerList>192.168.1.104:9092,192.168.1.105:9092,192.168.1.106:9092,192.168.1.107:9092,192.168.1.108:9092</brokerList>
+    </kafka>
+    <hbase>
+        <rootDir>hdfs://192.168.1.104:9000/hbase</rootDir>
+        <ip>192.168.1.106,192.168.1.107,192.168.1.108</ip>
+    </hbase>
+</xml>
