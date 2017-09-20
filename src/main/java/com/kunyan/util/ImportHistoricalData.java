@@ -2,6 +2,7 @@ package com.kunyan.util;
 
 import com.kunyan.Scheduler;
 import com.kunyan.entity.News;
+import de.mwvb.base.xml.XMLDocument;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -30,14 +31,19 @@ public class ImportHistoricalData {
 
     public static void main(String[] args) {
 
-        elasticUtil = new ElasticUtil();
+        XMLDocument doc = new XMLDocument();
+        doc.loadFile(args[0]);
+        elasticUtil = new ElasticUtil(doc);
+        String mysqlUrl = doc.selectSingleNode("xml/mysql/url").getText();
+        String userName = doc.selectSingleNode("xml/mysql/user_name").getText();
+        String passWord = doc.selectSingleNode("xml/mysql/pass_word").getText();
 
-        MyHbaseUtil myHbaseUtil = new MyHbaseUtil("hdfs://pmaster:9000/hbase","pslave1,pslave2,pslave3");
-//        MyHbaseUtil myHbaseUtil = new MyHbaseUtil("hdfs://master1:9000/hbase","slave1,slave2,slave3");
+//        MyHbaseUtil myHbaseUtil = new MyHbaseUtil("hdfs://pmaster:9000/hbase","pslave1,pslave2,pslave3");
+        MyHbaseUtil myHbaseUtil = new MyHbaseUtil("hdfs://master1:9000/hbase","slave1,slave2,slave3");
         Table table1 = myHbaseUtil.getTable("news_detail");
         Table table2 = myHbaseUtil.getTable("new_news");
 
-        Connection conn = MySqlUtil.getMysqlConn("jdbc:mysql://122.225.110.120:3306/news?userUnicode=true&amp;characterEncoding=utf-8&amp;noAccessToProcedureBodies=true&amp;autoReconnect=true", "news", "news");
+        Connection conn = MySqlUtil.getMysqlConn(mysqlUrl, userName, passWord);
 
         ResultSet resultSet = MySqlUtil.getMysqlData(conn, "select * from news_info where news_time>1502812800000");
 

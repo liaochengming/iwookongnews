@@ -3,6 +3,7 @@ package com.kunyan.util;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kunyan.entity.News;
+import de.mwvb.base.xml.XMLDocument;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -29,12 +30,16 @@ public class ElasticUtil {
 
     final static Logger logger = LoggerFactory.getLogger(ElasticUtil.class);
 
-    String index = "news";
-    String type = "real_news";
+    String index;
+    String type;
+    XMLDocument doc;
 
     public TransportClient client = null;
 
-    public ElasticUtil() {
+    public ElasticUtil(XMLDocument doc) {
+        this.doc = doc;
+        this.index = doc.selectSingleNode("xml/es/index").getText();
+        this.type = doc.selectSingleNode("xml/es/type").getText();
         initConn();
     }
 
@@ -78,7 +83,7 @@ public class ElasticUtil {
 
     public String CreateNews(News news) {
 
-        ObjectMapper mapper = new ObjectMapper(); // create once, reuse
+        ObjectMapper mapper = new ObjectMapper();
         String json = null;
         try {
             json = mapper.writeValueAsString(news);
@@ -90,24 +95,22 @@ public class ElasticUtil {
     }
 
     public boolean initConn() {
+
+        String userName = doc.selectSingleNode("xml/es/user_name").getText();
+        String passWord = doc.selectSingleNode("xml/es/pass_word").getText();
+        String serverIp = doc.selectSingleNode("xml/es/serverIp").getText();
+        int serverPort = Integer.valueOf(doc.selectSingleNode("xml/es/server_port").getText());
+        String cluserName = "news";
         try {
-            String cluserName = "news";
-            String userName = "news";
-            String password = "kunyan221";
-//            String serverIp = "192.168.1.113";
-            String serverIp = "122.225.110.113";
-            String serverIp2 = "122.225.110.114";
-//            String serverIp = "192.168.1.81";
-//            String serverIp2 = "192.168.1.82";
-            int serverPort = 9300;
+
             client = new PreBuiltXPackTransportClient(Settings.builder()
                     .put("cluster.name", cluserName)
-                    .put("xpack.security.user", userName + ":" + password)
+                    .put("xpack.security.user", userName + ":" + passWord)
                     .put("xpack.security.transport.ssl.enabled", "false")
                     .build()
             ).addTransportAddress(
                     new InetSocketTransportAddress(InetAddress.getByName(serverIp), serverPort)
-            ).addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(serverIp2), serverPort));
+            );
         } catch (Exception e) {
             e.printStackTrace();
             return false;

@@ -41,11 +41,12 @@ public class Scheduler {
 
             EasyParser easyParser =EasyParser.apply();
 
-            ElasticUtil elasticUtil = new ElasticUtil();
 
-            //FileWriter fw = new FileWriter("/home/liaochengming/log_iw.txt");
             XMLDocument doc = new XMLDocument();
             doc.loadFile(args[0]);
+
+            ElasticUtil elasticUtil = new ElasticUtil(doc);
+
             String groupId = doc.selectSingleNode("xml/kafka/groupId").getText();
             String newsReceive = doc.selectSingleNode("xml/kafka/newsreceive").getText();
             String sentimentBack = doc.selectSingleNode("xml/kafka/sentiment_back").getText();
