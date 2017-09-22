@@ -12,6 +12,8 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by Administrator on 2017/9/11.
@@ -21,6 +23,7 @@ public class ImportHistoricalData {
 
     static String type;
     static String newsUrl;
+    static String summary;
     static String newsDate;
     static String newsTime;
     static String[] date;
@@ -52,6 +55,9 @@ public class ImportHistoricalData {
         df.setGroupingUsed(false);
         df.setMaximumFractionDigits(6);
 
+        Pattern pattern= Pattern.compile("\\d+年\\d+月\\d+日 \\d+:\\d+:\\d+");
+        Matcher matcher;
+
         Get get;
 
         try {
@@ -61,11 +67,13 @@ public class ImportHistoricalData {
 
                     type = resultSet.getString("type");
                     newsUrl = resultSet.getString("url");
+                    summary = resultSet.getString("summary");
                     date = Scheduler.getTime(resultSet.getString("news_time"));
                     newsDate = date[0];
                     newsTime = date[1];
 
-                    if(type.equals("0") || type.equals("2") || type.equals("3")){
+                    //快讯无正文
+                    if(!type.equals("1")){
 
                         get = new Get(newsUrl.getBytes());
                         content = queryHbase(table1,get);
@@ -76,9 +84,21 @@ public class ImportHistoricalData {
                         content = "";
                     }
 
+                    //去掉bigv的摩尔正文和摘要开头的时间
+                    if(type.equals("2") && !content.equals("")){
+                        matcher = pattern.matcher(content);
+
+                        if(matcher.find()){
+                            String str = matcher.group(0);
+                            content = content.replaceFirst(str,"").replaceFirst("\\n","");
+                            summary = summary.replaceFirst(str,"").replaceFirst("\\n","");
+                        }
+                    }
+
+
                     news =  new News(type,
                             resultSet.getString("title"),
-                            resultSet.getString("summary"),
+                            summary,
                             resultSet.getString("source"),
                             resultSet.getString("url"),
                             newsDate,

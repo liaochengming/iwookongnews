@@ -39,7 +39,7 @@ public class News {
 
     private boolean related;
 
-    private List<String> remark;
+    private List<String> remarks;
 
     private String tags;
 
@@ -62,7 +62,7 @@ public class News {
                 String site, String url, String newsDate,
                 String newsTime, List<String> industries, List<String> sections,
                 List<String> stocks, float positiveRate, float neutralRate,
-                float passiveRate, String content,boolean related,List<String> remark,
+                float passiveRate, String content,boolean related,List<String> remarks,
                 String tags,String newsId) {
         this.type = type;
         this.title = title;
@@ -79,7 +79,7 @@ public class News {
         this.passiveRate = passiveRate;
         this.content = content;
         this.related = related;
-        this.remark = remark;
+        this.remarks = remarks;
         this.tags = tags;
         this.newsId = newsId;
     }
@@ -161,12 +161,12 @@ public class News {
         this.related = related;
     }
 
-    public List<String> getRemark() {
-        return remark;
+    public List<String> getRemarks() {
+        return remarks;
     }
 
-    public void setRemark(List<String> remark) {
-        this.remark = remark;
+    public void setRemarks(List<String> remarks) {
+        this.remarks = remarks;
     }
 
     public String getTags() {
