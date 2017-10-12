@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml>
+    <kafka>
+        <zookeeper>192.168.1.106:2181,192.168.1.107:2181,192.168.1.108:2181</zookeeper>
+        <groupId>two</groupId>
+        <newsreceive>new_news</newsreceive>
+        <sentiment_back>sentiment_back</sentiment_back>
+        <sentiment_send>sentiment_send</sentiment_send>
+        <brokerList>192.168.1.104:9092,192.168.1.105:9092,192.168.1.106:9092,192.168.1.107:9092,192.168.1.108:9092</brokerList>
+    </kafka>
+    <hbase>
+        <rootDir>hdfs://master1:9000/hbase</rootDir>
+        <ip>master1,slave1,slave2,slave3</ip>
+    </hbase>
+    <mysql>
+        <url>jdbc:mysql://192.168.1.113:3306/news?userUnicode=true&amp;characterEncoding=utf-8&amp;noAccessToProcedureBodies=true&amp;autoReconnect=true</url>
+        <user_name>liaochengming</user_name>
+        <pass_word>liaochengming</pass_word>
+    </mysql>
+    <es>
+        <user_name>news</user_name>
+        <pass_word>kunyan221</pass_word>
+        <!--<serverIp>122.225.110.113</serverIp>-->
+        <!--<serverIp>122.225.110.103</serverIp>-->
+        <serverIp>192.168.1.113</serverIp>
+        <server_port>9300</server_port>
+        <index>news</index>
+        <type>real_news</type>
+    </es>
+</xml>

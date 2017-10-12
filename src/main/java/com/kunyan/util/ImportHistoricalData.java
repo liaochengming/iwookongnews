@@ -68,7 +68,7 @@ public class ImportHistoricalData {
                     type = resultSet.getString("type");
                     newsUrl = resultSet.getString("url");
                     summary = resultSet.getString("summary");
-                    date = Scheduler.getTime(resultSet.getString("news_time"));
+                    date = Scheduler.getTime(resultSet.getString("news_time")).replaceAll(" ","").split(" ");
                     newsDate = date[0];
                     newsTime = date[1];
 
@@ -112,7 +112,8 @@ public class ImportHistoricalData {
                             content,
                             true,new ArrayList<String>(),
                             "",
-                            newsUrl);
+                            newsUrl,
+                            Scheduler.getTime(resultSet.getString("updated_time")));
                     Scheduler.insertES(news, elasticUtil);
                 }
             }

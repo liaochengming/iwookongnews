@@ -5,65 +5,54 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 /**
- * Created by Administrator on 2017/9/1.
+ * Created by lcm on 2017/9/1.
  * 新闻实体
  */
 public class News {
 
     private String type;//新闻类型
-    private String title;
-    private String summary;//摘要
+    private String title;//新闻标题
+    private String summary;//新闻摘要
     private String site;//来源站名
-    private String url;
+    private String url;//新闻网址
+    private List<String> industries;//行业
+    private List<String> sections;//板块
+    private List<String> stocks;//股票
+    private boolean related;//相关
+    private List<String> remarks;//行业概念的标记
+    private String tags;//新闻标签
 
     @JsonProperty(value = "news_date")
     private String newsDate;//日期
 
+    @JsonProperty(value = "time_spider")
+    private String timeSpider;//爬取时间
+
     @JsonProperty(value = "news_time")
     private String newsTime;//时间
-    private List<String> industries;//行业
-    private List<String> sections;//板块
-    private List<String> stocks;//股票
 
     @JsonProperty(value = "positive_rate")
-    private float positiveRate;
+    private float positiveRate;//情感值
 
     @JsonProperty(value = "neutral_rate")
-    private float neutralRate;
+    private float neutralRate;//情感值
 
     @JsonProperty(value = "passive_rate")
-    private float passiveRate;
+    private float passiveRate;//情感值
 
     @JsonProperty(value = "body")
-    private String content;
-
-    private boolean related;
-
-    private List<String> remarks;
-
-    private String tags;
+    private String content;//新闻正文
 
     @JsonProperty(value = "news_id")
-    private String newsId;
+    private String newsId;//暂存新闻url
 
-    public boolean isRelated() {
-        return related;
-    }
-
-    public String getNewsId() {
-        return newsId;
-    }
-
-    public void setNewsId(String newsId) {
-        this.newsId = newsId;
-    }
 
     public News(String type, String title, String summary,
                 String site, String url, String newsDate,
                 String newsTime, List<String> industries, List<String> sections,
                 List<String> stocks, float positiveRate, float neutralRate,
                 float passiveRate, String content,boolean related,List<String> remarks,
-                String tags,String newsId) {
+                String tags,String newsId,String timeSpider) {
         this.type = type;
         this.title = title;
         this.summary = summary;
@@ -82,6 +71,7 @@ public class News {
         this.remarks = remarks;
         this.tags = tags;
         this.newsId = newsId;
+        this.timeSpider = timeSpider;
     }
 
     public String getType() {
@@ -139,7 +129,6 @@ public class News {
     public String getContent() {
         return content;
     }
-
 
     public void setType(String type) {
         this.type = type;
@@ -219,6 +208,22 @@ public class News {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public String getTimeSpider() { return timeSpider; }
+
+    public void setTimeSpider(String timeSpider) { this.timeSpider = timeSpider; }
+
+    public boolean isRelated() {
+        return related;
+    }
+
+    public String getNewsId() {
+        return newsId;
+    }
+
+    public void setNewsId(String newsId) {
+        this.newsId = newsId;
     }
 
 }
