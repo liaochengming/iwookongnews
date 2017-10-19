@@ -2,7 +2,7 @@
 <xml>
     <kafka>
         <zookeeper>192.168.1.106:2181,192.168.1.107:2181,192.168.1.108:2181</zookeeper>
-        <groupId>two</groupId>
+        <groupId>1989</groupId>
         <newsreceive>new_news</newsreceive>
         <sentiment_back>sentiment_back</sentiment_back>
         <sentiment_send>sentiment_send</sentiment_send>
@@ -16,6 +16,7 @@
         <url>jdbc:mysql://192.168.1.113:3306/news?userUnicode=true&amp;characterEncoding=utf-8&amp;noAccessToProcedureBodies=true&amp;autoReconnect=true</url>
         <user_name>liaochengming</user_name>
         <pass_word>liaochengming</pass_word>
+        <parseUrl>jdbc:mysql://192.168.1.113/news?user=news&amp;password=news&amp;useUnicode=true&amp;characterEncoding=utf8</parseUrl>
     </mysql>
     <es>
         <user_name>news</user_name>
@@ -24,6 +25,8 @@
         <!--<serverIp>122.225.110.103</serverIp>-->
         <serverIp>192.168.1.113</serverIp>
         <server_port>9300</server_port>
+        <!--<cluster>news_production</cluster>-->
+        <cluster>news</cluster>
         <index>news</index>
         <type>real_news</type>
     </es>

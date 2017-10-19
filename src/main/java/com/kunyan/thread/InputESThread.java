@@ -1,0 +1,83 @@
+package com.kunyan.thread;
+
+import com.kunyan.entity.News;
+import com.kunyan.util.ElasticUtil;
+
+import java.text.ParseException;
+import java.util.List;
+
+import static com.kunyan.Scheduler.esTitleExist;
+import static com.kunyan.Scheduler.getList;
+import static com.kunyan.Scheduler.insertES;
+
+public class InputESThread implements Runnable {
+
+
+    private String data;
+    private ElasticUtil elasticUtil;
+
+    public InputESThread(String data, ElasticUtil elasticUtil){
+        this.data = data;
+        this.elasticUtil = elasticUtil;
+    }
+
+    public void run() {
+        String newsType;
+        String newsTitle;
+        String newsSummary;
+        String site;
+        String newsUrl;
+        String newsDate;
+        String newsTime;
+        List<String> industries;
+        List<String> sections;
+        List<String> stocks;
+        Float positiveRate;
+        Float neutralRate;
+        Float passiveRate;
+        String newsBody;
+        String[] arr;
+        boolean related;
+        List<String> remark;
+        String tags;
+        String timeSpider;
+
+        arr = data.split("<=");
+        if (arr.length == 18) {
+
+            newsType = arr[4];
+            newsTitle = arr[5];
+            newsSummary = arr[6];
+            site = arr[7];
+            newsUrl = arr[0];
+            newsDate = arr[8];
+            newsTime = arr[9];
+            industries = getList(arr[10]);
+            sections = getList(arr[11]);
+            stocks = getList(arr[12]);
+            positiveRate = Float.valueOf(arr[1]);
+            neutralRate = Float.valueOf(arr[2]);
+            passiveRate = Float.valueOf(arr[3]);
+            newsBody = arr[13];
+            related = arr[14].contains("y");
+            remark = getList(arr[15]);
+            tags = arr[16];
+            timeSpider = arr[17];
+
+            News news = new News(newsType, newsTitle, newsSummary,
+                    site, newsUrl, newsDate,
+                    newsTime, industries, sections,
+                    stocks, positiveRate, neutralRate,
+                    passiveRate, newsBody, related, remark, tags, newsUrl, timeSpider);
+            try {
+                if (!esTitleExist(newsTitle, elasticUtil, Integer.valueOf(newsType))) {
+                    insertES(news, elasticUtil);
+                    System.out.print("inputES");
+                }
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+            System.out.println(arr[15] + " " +newsUrl);
+        }
+    }
+}

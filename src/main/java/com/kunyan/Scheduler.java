@@ -1,9 +1,9 @@
 package com.kunyan;
 
 import com.kunyan.entity.News;
-import com.kunyan.util.ElasticUtil;
-import com.kunyan.util.MyHbaseUtil;
-import com.kunyan.util.MySqlUtil;
+import com.kunyan.thread.DisposeDataThread;
+import com.kunyan.thread.InputESThread;
+import com.kunyan.util.*;
 import com.nlp.util.EasyParser;
 import com.nlp.util.SegmentHan;
 import de.mwvb.base.xml.XMLDocument;
@@ -11,13 +11,10 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.*;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -25,8 +22,8 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 /**
@@ -36,7 +33,8 @@ import java.util.regex.Pattern;
  */
 public class Scheduler {
 
-    private static Table table = null;
+    public static EasyParser easyParser;
+    public static ElasticUtil elasticUtil;
 
     /**
      * 主方法
@@ -53,33 +51,32 @@ public class Scheduler {
 
         try {
 
-            String mysqlStockUrl = "jdbc:mysql://192.168.1.113/news?user=stock&password=stock&useUnicode=true&characterEncoding=utf8";
-            final EasyParser easyParser = EasyParser.apply(mysqlStockUrl);
-
-
             XMLDocument doc = new XMLDocument();
             doc.loadFile(args[0]);
             final long timeStar = new SimpleDateFormat("yyyy-MM-dd").parse(args[1]).getTime();
             final long timeEnd = new SimpleDateFormat("yyyy-MM-dd").parse(args[2]).getTime();
 
-            final ElasticUtil elasticUtil = new ElasticUtil(doc);
+            elasticUtil = new ElasticUtil(doc);
+
+            String mysqlStockUrl = doc.selectSingleNode("xml/mysql/parseUrl").getText();
+            easyParser = EasyParser.apply(mysqlStockUrl);
 
             String groupId = doc.selectSingleNode("xml/kafka/groupId").getText();
-            //String newsReceive = doc.selectSingleNode("xml/kafka/newsreceive").getText();
+//            String newsReceive = doc.selectSingleNode("xml/kafka/newsreceive").getText();
             String sentimentBack = doc.selectSingleNode("xml/kafka/sentiment_back").getText();
-            final String sentimentSend = doc.selectSingleNode("xml/kafka/sentiment_send").getText();
+            String sentimentSend = doc.selectSingleNode("xml/kafka/sentiment_send").getText();
             String brokerList = doc.selectSingleNode("xml/kafka/brokerList").getText();
 
             String rootDir = doc.selectSingleNode("xml/hbase/rootDir").getText();
             String ip = doc.selectSingleNode("xml/hbase/ip").getText();
-            final MyHbaseUtil hbaseUtil = new MyHbaseUtil(rootDir, ip);
+            MyHbaseUtil hbaseUtil = new MyHbaseUtil(rootDir, ip);
 
             String mysqlUrl = doc.selectSingleNode("xml/mysql/url").getText();
             String userName = doc.selectSingleNode("xml/mysql/user_name").getText();
             String passWord = doc.selectSingleNode("xml/mysql/pass_word").getText();
 
             Connection conn = MySqlUtil.getMysqlConn(mysqlUrl, userName, passWord);
-            final ResultSet resultSet = MySqlUtil.getMysqlData(conn, "select * from news_info where type=1 and news_time>" + timeStar + " and news_time<" + timeEnd);
+            ResultSet resultSet = MySqlUtil.getMysqlData(conn, "select * from news_info where type=1 and news_time>" + timeStar + " and news_time<" + timeEnd);
 
             Properties kafkaConsumerProps = new Properties();
             kafkaConsumerProps.put("bootstrap.servers", brokerList);
@@ -101,78 +98,26 @@ public class Scheduler {
             kafkaProducerProps.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 
             KafkaConsumer<String, String> consumer = new KafkaConsumer<String, String>(kafkaConsumerProps);
-            final Producer<String, String> producer = new KafkaProducer<String, String>(kafkaProducerProps);
+            Producer<String, String> producer = new KafkaProducer<String, String>(kafkaProducerProps);
+
 
             consumer.subscribe(Collections.singletonList(sentimentBack));
 
             //删除ES的数据
             deleteEsData(args[1], args[2], elasticUtil);
 
-            new Thread(new Runnable() {
-                public void run() {
-
-                    //扫描hbase数据写入kafka
-                    getData(timeStar, timeEnd, easyParser, producer, sentimentSend, resultSet, elasticUtil, hbaseUtil);
-                }
-            }).start();
+            //扫描hbase数据写入kafka
+            getData(timeStar, timeEnd, producer, sentimentSend, resultSet, elasticUtil, hbaseUtil);
 
             String value;
-            String newsType;
-            String newsTitle;
-            String newsSummary;
-            String site;
-            String newsUrl;
-            String newsDate;
-            String newsTime;
-            List<String> industries;
-            List<String> sections;
-            List<String> stocks;
-            Float positiveRate;
-            Float neutralRate;
-            Float passiveRate;
-            String newsBody;
-            String[] arr;
-            boolean related;
-            List<String> remark;
-            String tags;
-            String timeSpider;
+            ExecutorService executorService = Executors.newFixedThreadPool(1);
             while (true) {
                 ConsumerRecords<String, String> records = consumer.poll(100);
                 for (ConsumerRecord<String, String> record : records) {
-
-                    //System.out.printf("offset = %d, key = %s, value = %s", record.offset(), record.key(), record.value());
                     value = record.value();
-
-                    arr = value.split("<=");
-                    if (arr.length == 18) {
-
-                        newsType = arr[4];
-                        newsTitle = arr[5];
-                        newsSummary = arr[6];
-                        site = arr[7];
-                        newsUrl = arr[0];
-                        newsDate = arr[8];
-                        newsTime = arr[9];
-                        industries = getList(arr[10]);
-                        sections = getList(arr[11]);
-                        stocks = getList(arr[12]);
-                        positiveRate = Float.valueOf(arr[1]);
-                        neutralRate = Float.valueOf(arr[2]);
-                        passiveRate = Float.valueOf(arr[3]);
-                        newsBody = arr[13];
-                        related = arr[14].contains("y");
-                        remark = getList(arr[15]);
-                        tags = arr[16];
-                        timeSpider = arr[17];
-
-                        News news = new News(newsType, newsTitle, newsSummary,
-                                site, newsUrl, newsDate,
-                                newsTime, industries, sections,
-                                stocks, positiveRate, neutralRate,
-                                passiveRate, newsBody, related, remark, tags, newsUrl, timeSpider);
-                        insertES(news, elasticUtil);
-                    }
+                    executorService.execute(new InputESThread(value,elasticUtil));
                 }
+
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -186,194 +131,48 @@ public class Scheduler {
         }
     }
 
-    public static void getData(long timeStar, long timeEnd, EasyParser easyParser, Producer producer, String kafkaSend,
-                               ResultSet resultSet, ElasticUtil elasticUtil, MyHbaseUtil myHbaseUtil) {
+    private static void getData(long timeStar, long timeEnd,  Producer producer, String kafkaSend,
+                                ResultSet resultSet, ElasticUtil elasticUtil, MyHbaseUtil myHbaseUtil) {
 
         Table table1 = myHbaseUtil.getTable("news_detail");
         Table table2 = myHbaseUtil.getTable("new_news");
         Table[] tables = new Table[]{table1, table2};
 
+        ExecutorService executorService = Executors.newFixedThreadPool(5);
         for (Table t : tables) {
             Scan scan = new Scan();
+            ResultScanner results = null;
             try {
                 scan.setTimeRange(timeStar, timeEnd);
-                scan.setCaching(2000);
-                ResultScanner results = t.getScanner(scan);
+                scan.setCaching(100);
+                scan.setMaxVersions();
+                results = t.getScanner(scan);
                 Result result = results.next();
-
-                int newsType = 0;
-                Pattern pattern = Pattern.compile("\\d+年\\d+月\\d+日 \\d+:\\d+:\\d+");
-                Matcher matcher;
-
-                String articleType;
-                String content;
-                String platform;
-                String related;
-                String tags;
-                String remark;
-                String time;
-                String timeSpider;
-                String title;
-                String url;
-                String summary = "";
-
-                String industry = "";//行业
-                String section = "";//板块
-                String stock = "";//股票
-
-                String[] date;
+                int i = 0;
+                long t1 = System.currentTimeMillis();
+                System.out.println("开始扫描" + t.getName());
                 while (null != result) {
-                    try {
-                        result = results.next();
-                        byte[] bPlatform = result.getValue(Bytes.toBytes("basic"), Bytes.toBytes("platform"));
-                        if (bPlatform == null) bPlatform = new byte[]{};
-                        platform = Bytes.toString(bPlatform);
-                        int platformInt = Integer.valueOf(platform);
-
-                        //去掉雪球的大V文章
-                        if (!platform.equals("60005")) {
-                            byte[] bTitle = result.getValue(Bytes.toBytes("basic"), Bytes.toBytes("title"));
-                            if (bTitle == null) bTitle = new byte[]{};
-                            title = Bytes.toString(bTitle).replaceFirst("\"", "“");
-                            title = title.replaceFirst("\"", "”");
-                            title = title.replaceFirst("\"", "“");
-                            title = title.replaceFirst("\"", "”");
-
-
-                            byte[] bArticleType = result.getValue(Bytes.toBytes("basic"), Bytes.toBytes("article_type"));
-                            byte[] bContent = result.getValue(Bytes.toBytes("basic"), Bytes.toBytes("content"));
-                            byte[] bRelated = result.getValue(Bytes.toBytes("basic"), Bytes.toBytes("related"));
-                            byte[] bTags = result.getValue(Bytes.toBytes("basic"), Bytes.toBytes("tags"));
-                            byte[] bTime = result.getValue(Bytes.toBytes("basic"), Bytes.toBytes("time"));
-                            byte[] bTimeSpider = result.getValue(Bytes.toBytes("basic"), Bytes.toBytes("time_spider"));
-                            byte[] bUrl = result.getValue(Bytes.toBytes("basic"), Bytes.toBytes("url"));
-                            byte[] bRemark = result.getValue(Bytes.toBytes("basic"), Bytes.toBytes("remark"));
-
-                            if (bArticleType == null) bArticleType = new byte[]{};
-                            if (bContent == null) bContent = new byte[]{};
-                            if (bRelated == null) bRelated = new byte[]{};
-                            if (bTags == null) bTags = new byte[]{};
-                            if (bTime == null) bTime = new byte[]{};
-                            if (bTimeSpider == null) bTimeSpider = new byte[]{};
-                            if (bUrl == null) bUrl = new byte[]{};
-                            if (bRemark == null) bRemark = new byte[]{};
-
-                            articleType = Bytes.toString(bArticleType);
-                            content = Bytes.toString(bContent);
-                            related = Bytes.toString(bRelated);
-                            tags = Bytes.toString(bTags);
-                            time = Bytes.toString(bTime);
-                            timeSpider = Bytes.toString(bTimeSpider);
-                            if (time.equals("")) {
-                                time = timeSpider;
-                            }
-                            if(time.length() == 10){
-                                time = time + "000";
-                            }
-                            if(timeSpider.length() == 10){
-                                timeSpider = timeSpider + "000";
-                            }
-
-                            url = Bytes.toString(bUrl);
-                            remark = Bytes.toString(bRemark);
-
-                            if (platformInt == 60003 && !content.equals("")) {
-                                matcher = pattern.matcher(content);
-
-                                if (matcher.find()) {
-                                    String str = matcher.group(0);
-                                    content = content.replaceFirst(str, "").replaceFirst("\\n", "");
-                                }
-                            }
-
-                            if (!content.equals("")) {
-                                try {
-                                    summary = easyParser.getSummary(title, content);
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
-                            } else {
-                                summary = "";
-                            }
-                            summary = summary.replaceAll("\\r", "")
-                                    .replaceAll("\\n", "");
-
-                            if (!articleType.equals("")) {
-
-                                String[] remarks = ",".split(remark);
-
-                                for (String r : remarks) {
-
-                                    if (r.equals("行业新闻来源")) {
-                                        industry = Arrays.toString(easyParser.parseNews(3, content, title));
-                                    } else if (r.equals("板块概念的新闻来源")) {
-                                        section = Arrays.toString(easyParser.parseNews(2, content, title));
-                                    } else if (r.equals("个股新闻来源")) {
-                                        stock = Arrays.toString(easyParser.parseNews(1, content, title));
-                                    }
-                                }
-
-                                if (articleType.equals("新闻")) {
-                                    newsType = 0;
-                                } else if (articleType.equals("快讯")) {
-                                    newsType = 1;
-                                } else if (articleType.equals("达人观点")) {
-                                    newsType = 2;
-                                } else if (articleType.equals("研报")) {
-                                    newsType = 3;
-                                } else if (articleType.equals("公告")) {
-                                    newsType = 4;
-                                } else if (articleType.equals("行情分析")) {
-                                    newsType = 5;
-                                } else if (articleType.equals("行情图表")) {
-                                    newsType = 6;
-                                }
-                            } else {
-                                industry = "";
-                                section = "";
-                                stock = "";
-
-                                if (platformInt >= 10000 && platformInt <= 20000) {
-                                    newsType = 1; //快讯
-                                } else if (platformInt >= 50000 && platformInt <= 60000) {
-                                    newsType = 4;//公告
-                                } else if (platformInt >= 40000 && platformInt <= 50000) {
-                                    newsType = 2;
-                                } else if (platformInt == 60007 || platformInt == 60003) {
-                                    newsType = 2;
-                                } else if (platformInt == 60001 || platformInt == 60012 || platformInt == 60013) {
-                                    newsType = 3;
-                                }
-                            }
-
-                            //标题去重
-                            if (!esTitleExist(title, elasticUtil,newsType)) {
-                                date = getTime(time).replaceAll(":", "").split(" ");
-                                timeSpider = getTime(timeSpider);
-                                String otherInfo = newsType + "<=" + title + "<=" + summary + "<=" + getPlatformName(platformInt) +
-                                        "<=" + date[0] + "<=" + date[1] + "<=" + industry + "<=" + section + "<=" + stock + "<=" +
-                                        content + "<=" + related + "<=" + remark + "<=" + tags + "<=" + timeSpider;
-
-                                scala.collection.immutable.List<String> newTitle = SegmentHan.segment(title, false);
-                                producer.send(new ProducerRecord<String, String>(kafkaSend, "", url + "=>" + newTitle + "=>" + otherInfo));
-                            }
-                        }
-
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+                    executorService.execute(new DisposeDataThread(result,kafkaSend,producer));
+                    result = results.next();
+                    i++;
                 }
+
+                System.out.println("扫描完成" + i);
+                long t2 = System.currentTimeMillis();
+                System.out.println("扫描耗时 " + (t2-t1));
             } catch (Exception e) {
                 e.printStackTrace();
+            }finally {
+                if(results != null){
+                    results.close();
+                }
             }
         }
         System.out.println("hbase数据取完");
 
         try {
             if (resultSet != null) {
-                String articleType;
-                String content;
-                String platform;
+                String content="";
                 String related = "";
                 String tags = "";
                 String remark = "";
@@ -393,8 +192,9 @@ public class Scheduler {
 
                     title = resultSet.getString("title");
 
+                    System.out.println("查询的mysql的数据:   " + resultSet.getString("url") );
                     //标题去重
-                    if (!esTitleExist(title, elasticUtil,1)) {
+                    if (!esTitleExist(title, elasticUtil, 1)) {
                         url = resultSet.getString("url");
                         summary = resultSet.getString("summary");
                         summary = summary.replaceAll("\\r", "")
@@ -403,11 +203,15 @@ public class Scheduler {
                         time = resultSet.getString("news_time");
                         timeSpider = resultSet.getString("updated_time");
 
-                        if(time.length() == 10){ time = time + "000"; }
-                        if(timeSpider.length() == 10){ timeSpider = timeSpider + "000"; }
+                        if (time.length() == 10) {
+                            time = time + "000";
+                        }
+                        if (timeSpider.length() == 10) {
+                            timeSpider = timeSpider + "000";
+                        }
 
                         date = Scheduler.getTime(time).replaceAll(":", "").split(" ");
-                        content = resultSet.getString("content");
+                        //content = resultSet.getString("content");
 
                         //快讯无正文
                         String otherInfo = 1 + "<=" + title + "<=" + summary + "<=" + resultSet.getString("source") +
@@ -416,14 +220,14 @@ public class Scheduler {
 
                         scala.collection.immutable.List<String> newTitle = SegmentHan.segment(title, false);
                         producer.send(new ProducerRecord<String, String>(kafkaSend, "", url + "=>" + newTitle + "=>" + otherInfo));
-
+                        System.out.println("发送的数据:   " + url );
                     }
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-
+        System.out.println("mysql数据取完");
     }
 
 
@@ -560,11 +364,7 @@ public class Scheduler {
         int likeTitleLength = likeTitle.length();
         int titleLength = title.length();
         int differ = likeTitleLength - titleLength;
-        if(newsType == 4 && differ == 0){
-            return true;
-        }else{
-            return !likeTitle.equals("") && differ <= 5 && differ >= -5;
-        }
+        return newsType == 4 && differ == 0 || !likeTitle.equals("") && differ <= 5 && differ >= -5;
 
     }
 

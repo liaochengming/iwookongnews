@@ -94,6 +94,7 @@ public class ElasticUtil {
 
     //查找Es是否包含相似字段
     public String hasFieldLike(String field, String fieldStr, String percent) throws ParseException {
+
         SearchResponse response = client.prepareSearch(index)
                 .setTypes(type)
                 .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
@@ -103,12 +104,18 @@ public class ElasticUtil {
                 .setQuery(QueryBuilders.matchQuery(field, fieldStr).minimumShouldMatch(percent))//相似度查询
                 .execute().actionGet();
         SearchHits searchHits = response.getHits();
-
-        if (searchHits.totalHits > 0) {
-            return (String) searchHits.getAt(0).getSource().get(field);
-        } else {
-            return "";
+        String likeTitle = "";
+        for(SearchHit searchHit : searchHits){
+            String t = (String)searchHit.getSource().get(field);
+            if(likeTitle.equals("")){
+                likeTitle = t;
+            }else{
+                if(likeTitle.length() > t.length()){
+                    likeTitle = t;
+                }
+            }
         }
+        return  likeTitle;
     }
 
     //根据ID删除文档
@@ -169,7 +176,7 @@ public class ElasticUtil {
         String passWord = doc.selectSingleNode("xml/es/pass_word").getText();
         String serverIp = doc.selectSingleNode("xml/es/serverIp").getText();
         int serverPort = Integer.valueOf(doc.selectSingleNode("xml/es/server_port").getText());
-        String cluserName = "news";
+        String cluserName = doc.selectSingleNode("xml/es/cluster").getText();
         try {
 
             client = new PreBuiltXPackTransportClient(Settings.builder()
@@ -177,9 +184,12 @@ public class ElasticUtil {
                     .put("xpack.security.user", userName + ":" + passWord)
                     .put("xpack.security.transport.ssl.enabled", "false")
                     .build()
-            ).addTransportAddress(
-                    new InetSocketTransportAddress(InetAddress.getByName(serverIp), serverPort)
             );
+            for (String esIp : serverIp.split(",")) {
+                client.addTransportAddress(
+                        new InetSocketTransportAddress(InetAddress.getByName(esIp),
+                                serverPort));
+            }
         } catch (Exception e) {
             e.printStackTrace();
             return false;
@@ -206,5 +216,45 @@ public class ElasticUtil {
                 .setQuery(QueryBuilders.matchQuery(field, fieldStr).minimumShouldMatch(percent))//相似度查询
                 .execute().actionGet();
         return response.getHits();
+    }
+
+
+    /**
+     *
+     * @param timeStart yyyy-MM-dd hh:mm:ss
+     * @param timeEnd yyyy-MM-dd hh:mm:ss
+     * @return SearchHits
+     */
+    public Set<SearchHit> timeSearchData(String timeStart,String timeEnd) throws ExecutionException, InterruptedException {
+        Set<SearchHit> hitSet = new HashSet<SearchHit>();
+        SearchResponse response = client.prepareSearch(index)
+                .setTypes(type)
+                .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
+                .setSize(1000)
+                .setScroll(TimeValue.timeValueMinutes(8))
+                .setPostFilter(QueryBuilders.rangeQuery("time_spider")//时间过滤
+                        .gte(timeStart)
+                        .lte(timeEnd))
+                .get();
+        //第一个集合
+        SearchHits searchHits = response.getHits();
+        for(SearchHit searchHit : searchHits){
+            hitSet.add(searchHit);
+        }
+        System.out.println(searchHits.getTotalHits());
+
+        String scrollId = response.getScrollId();
+        int size = searchHits.getHits().length;
+        while(size != 0){
+            response = client.prepareSearchScroll(scrollId)
+                    .setScroll(TimeValue.timeValueMinutes(8)).get();
+            searchHits = response.getHits();
+            for(SearchHit searchHit : searchHits){
+                hitSet.add(searchHit);
+            }
+            scrollId = response.getScrollId();
+            size = searchHits.getHits().length;
+        }
+        return hitSet;
     }
 }
