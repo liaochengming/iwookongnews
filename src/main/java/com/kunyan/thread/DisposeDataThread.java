@@ -146,6 +146,7 @@ public class DisposeDataThread implements Runnable {
                                 }
                             }
 
+                            articleType = articleType.split(",")[0];
                             if (articleType.equals("新闻")) {
                                 newsType = 0;
                             } else if (articleType.equals("快讯")) {
@@ -191,7 +192,12 @@ public class DisposeDataThread implements Runnable {
                                     date = getTime(timeStamp + "").replaceAll(":", "").split(" ");
                                 }
                             }
-                            timeSpider = getTime(timeSpider);
+
+                            if(!timeSpider.equals("") && timeSpider.startsWith("1") && timeSpider.length() == 13){
+                                timeSpider = getTime(timeSpider);
+                            }else{
+                                timeSpider = getTime(timeStamp + "");
+                            }
                             String otherInfo = newsType + "<=" + title + "<=" + summary + "<=" + getPlatformName(platformInt) +
                                     "<=" + date[0] + "<=" + date[1] + "<=" + industry + "<=" + section + "<=" + stock + "<=" +
                                     content + "<=" + related + "<=" + remark + "<=" + tags + "<=" + timeSpider;
@@ -209,6 +215,7 @@ public class DisposeDataThread implements Runnable {
         } catch (NoSuchElementException noSuchElementException){
           noSuchElementException.printStackTrace();
         }catch (NumberFormatException numberFormatException){
+            numberFormatException.printStackTrace();
             System.out.println("时间错误：" + url + " "+  time);
         } catch (Exception e) {
             e.printStackTrace();
