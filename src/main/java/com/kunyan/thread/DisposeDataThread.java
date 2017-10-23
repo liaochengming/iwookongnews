@@ -111,6 +111,9 @@ public class DisposeDataThread implements Runnable {
                         remark = Bytes.toString(bRemark);
 
                         if (platformInt == 60003 && !content.equals("")) {
+                            if(time.equals("")){
+                                time = timeStamp + "";
+                            }
                             String str = getTime(time);
                             content = content.replaceFirst(str, "").replaceFirst("\\n", "");
                         }
@@ -136,10 +139,10 @@ public class DisposeDataThread implements Runnable {
 
                                 if (r.equals("行业新闻来源")) {
                                     industry = Arrays.toString(easyParser.parseNews(3, title, content));
-                                    System.out.println("行业 " + stock + "\t"+url);
+                                    System.out.println("行业 " + industry + "\t"+url);
                                 } else if (r.contains("板块") || r.contains("概念")) {
                                     section = Arrays.toString(easyParser.parseNews(2, title, content));
-                                    System.out.println("概念 " + stock + "\t"+url);
+                                    System.out.println("概念 " + section + "\t"+url);
                                 } else if (r.equals("个股新闻来源")) {
                                     stock = Arrays.toString(easyParser.parseNews(1, title, content));
                                     System.out.println("个股 " + stock + "\t"+url);
@@ -183,7 +186,7 @@ public class DisposeDataThread implements Runnable {
                         //标题去重
                         if (!esTitleExist(title, elasticUtil, newsType)) {
                             if(time.startsWith("[")){
-                                System.out.println("错误时间 " + url);
+                                System.out.println("错误时间 " + time);
                                 date = time.replaceAll("\\[","").replaceAll("]","").trim().split(" ");
                             }else{
                                 if(time.startsWith("1") && time.length() == 13){

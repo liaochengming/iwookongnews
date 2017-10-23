@@ -216,7 +216,7 @@ public class Scheduler {
                         //快讯无正文
                         String otherInfo = 1 + "<=" + title + "<=" + summary + "<=" + resultSet.getString("source") +
                                 "<=" + date[0] + "<=" + date[1] + "<=" + industry + "<=" + section + "<=" + stock + "<=" +
-                                content + "<=" + related + "<=" + remark + "<=" + tags + getTime(timeSpider);
+                                content + "<=" + related + "<=" + remark + "<=" + tags + "<=" +getTime(timeSpider);
 
                         scala.collection.immutable.List<String> newTitle = SegmentHan.segment(title, false);
                         producer.send(new ProducerRecord<String, String>(kafkaSend, "", url + "=>" + newTitle + "=>" + otherInfo));
