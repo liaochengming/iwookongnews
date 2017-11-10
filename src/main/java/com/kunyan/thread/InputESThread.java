@@ -6,9 +6,7 @@ import com.kunyan.util.ElasticUtil;
 import java.text.ParseException;
 import java.util.List;
 
-import static com.kunyan.Scheduler.esTitleExist;
-import static com.kunyan.Scheduler.getList;
-import static com.kunyan.Scheduler.insertES;
+import static com.kunyan.Scheduler.*;
 
 public class InputESThread implements Runnable {
 
@@ -71,8 +69,13 @@ public class InputESThread implements Runnable {
                     passiveRate, newsBody, related, remark, tags, newsUrl, timeSpider);
             try {
                 if (!esTitleExist(newsTitle, elasticUtil, Integer.valueOf(newsType))) {
-                    insertES(news, elasticUtil);
-                    System.out.print("inputES");
+                    if (!esContentExist(newsTitle, newsBody, elasticUtil, newsUrl)) {
+                        long t1 = System.currentTimeMillis();
+                        insertES(news,elasticUtil);
+                        long t2 = System.currentTimeMillis();
+                        System.out.println("写入数据:title " + newsTitle + "\t" + "url: " + newsUrl);
+                        System.out.println("写入ES耗时: " + (t2 - t1) + "ms");
+                    }
                 }
             } catch (ParseException e) {
                 e.printStackTrace();

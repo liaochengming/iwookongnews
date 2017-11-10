@@ -22,11 +22,11 @@
         <user_name>news</user_name>
         <pass_word>kunyan221</pass_word>
         <!--<serverIp>122.225.110.113</serverIp>-->
-        <serverIp>122.225.110.103</serverIp>
-        <!--<serverIp>192.168.1.113</serverIp>-->
+        <!--<serverIp>122.225.110.103</serverIp>-->
+        <serverIp>192.168.1.113</serverIp>
         <server_port>9300</server_port>
-        <cluster>news_production</cluster>
-        <!--<cluster>news</cluster>-->
+        <!--<cluster>news_production</cluster>-->
+        <cluster>news</cluster>
         <index>news</index>
         <type>real_news</type>
     </es>

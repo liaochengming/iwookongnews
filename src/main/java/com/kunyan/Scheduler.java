@@ -15,6 +15,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.*;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -64,19 +66,19 @@ public class Scheduler {
             String groupId = doc.selectSingleNode("xml/kafka/groupId").getText();
 //            String newsReceive = doc.selectSingleNode("xml/kafka/newsreceive").getText();
             String sentimentBack = doc.selectSingleNode("xml/kafka/sentiment_back").getText();
-            String sentimentSend = doc.selectSingleNode("xml/kafka/sentiment_send").getText();
+            final String sentimentSend = doc.selectSingleNode("xml/kafka/sentiment_send").getText();
             String brokerList = doc.selectSingleNode("xml/kafka/brokerList").getText();
 
             String rootDir = doc.selectSingleNode("xml/hbase/rootDir").getText();
             String ip = doc.selectSingleNode("xml/hbase/ip").getText();
-            MyHbaseUtil hbaseUtil = new MyHbaseUtil(rootDir, ip);
+            final MyHbaseUtil hbaseUtil = new MyHbaseUtil(rootDir, ip);
 
             String mysqlUrl = doc.selectSingleNode("xml/mysql/url").getText();
             String userName = doc.selectSingleNode("xml/mysql/user_name").getText();
             String passWord = doc.selectSingleNode("xml/mysql/pass_word").getText();
 
             Connection conn = MySqlUtil.getMysqlConn(mysqlUrl, userName, passWord);
-            ResultSet resultSet = MySqlUtil.getMysqlData(conn, "select * from news_info where type=1 and news_time>" + timeStar + " and news_time<" + timeEnd);
+            final ResultSet resultSet = MySqlUtil.getMysqlData(conn, "select * from news_info where type=1 and news_time>" + timeStar + " and news_time<" + timeEnd);
 
             Properties kafkaConsumerProps = new Properties();
             kafkaConsumerProps.put("bootstrap.servers", brokerList);
@@ -98,16 +100,20 @@ public class Scheduler {
             kafkaProducerProps.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 
             KafkaConsumer<String, String> consumer = new KafkaConsumer<String, String>(kafkaConsumerProps);
-            Producer<String, String> producer = new KafkaProducer<String, String>(kafkaProducerProps);
+            final Producer<String, String> producer = new KafkaProducer<String, String>(kafkaProducerProps);
 
 
             consumer.subscribe(Collections.singletonList(sentimentBack));
 
             //删除ES的数据
-            deleteEsData(args[1], args[2], elasticUtil);
+            elasticUtil.searchDelete(args[1],args[2]);
 
             //扫描hbase数据写入kafka
-            getData(timeStar, timeEnd, producer, sentimentSend, resultSet, elasticUtil, hbaseUtil);
+            new Thread(new Runnable() {
+                public void run() {
+                    getData(timeStar, timeEnd, producer, sentimentSend, resultSet, elasticUtil, hbaseUtil);
+                }
+            }).start();
 
             String value;
             ExecutorService executorService = Executors.newFixedThreadPool(1);
@@ -124,12 +130,6 @@ public class Scheduler {
         }
     }
 
-    public static void deleteEsData(String timeStart, String timeEnd, ElasticUtil elasticUtil) throws ExecutionException, InterruptedException {
-        Set<String> ids = elasticUtil.searchIds(timeStart, timeEnd);
-        for (String id : ids) {
-            elasticUtil.deleteById(id);
-        }
-    }
 
     private static void getData(long timeStar, long timeEnd,  Producer producer, String kafkaSend,
                                 ResultSet resultSet, ElasticUtil elasticUtil, MyHbaseUtil myHbaseUtil) {
@@ -366,6 +366,31 @@ public class Scheduler {
         int differ = likeTitleLength - titleLength;
         return newsType == 4 && differ == 0 || !likeTitle.equals("") && differ <= 5 && differ >= -5;
 
+    }
+
+    public static boolean esContentExist(String title, String content, ElasticUtil elasticUtil, String url) {
+        String contentBeg;
+
+        if (content.length() > 100) {
+            contentBeg = content.substring(0, 100);
+        } else {
+            contentBeg = content;
+        }
+
+        SearchHits searchHits = elasticUtil.searchSomeLike("title", title, "80%");
+        String esContent;
+
+        for (SearchHit searchHit : searchHits) {
+            esContent = (String) searchHit.getSource().get("body");
+            if (esContent.startsWith(contentBeg)) {
+                System.out.println("新闻正文相似  新标题为: " + title + "\t" + "新url: " + url);
+                System.out.println("ES标题为: " + searchHit.getSource().get("title") +
+                        "ES url为: " + searchHit.getSource().get("url"));
+                return true;
+            }
+        }
+
+        return false;
     }
 
 

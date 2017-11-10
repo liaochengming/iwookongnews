@@ -149,7 +149,13 @@ public class DisposeDataThread implements Runnable {
                                 }
                             }
 
-                            articleType = articleType.split(",")[0];
+                        }
+
+                        if(!articleType.equals("")){
+
+                            if(articleType.contains(",")){
+                                articleType = articleType.split(",")[0];
+                            }
                             if (articleType.equals("新闻")) {
                                 newsType = 0;
                             } else if (articleType.equals("快讯")) {
@@ -165,11 +171,7 @@ public class DisposeDataThread implements Runnable {
                             } else if (articleType.equals("行情图表")) {
                                 newsType = 6;
                             }
-                        } else {
-                            industry = "";
-                            section = "";
-                            stock = "";
-
+                        }else{
                             if (platformInt >= 10000 && platformInt <= 20000) {
                                 newsType = 1; //快讯
                             } else if (platformInt >= 50000 && platformInt <= 60000) {

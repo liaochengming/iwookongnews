@@ -2,7 +2,6 @@ package com.kunyan.util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kunyan.Scheduler;
 import com.kunyan.entity.News;
 import de.mwvb.base.xml.XMLDocument;
 import org.elasticsearch.action.delete.DeleteResponse;
@@ -15,9 +14,9 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.TermsQueryBuilder;
+import org.elasticsearch.index.reindex.BulkByScrollResponse;
+import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
@@ -28,7 +27,9 @@ import org.slf4j.LoggerFactory;
 import java.net.InetAddress;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 
@@ -118,6 +119,25 @@ public class ElasticUtil {
         return  likeTitle;
     }
 
+    //查找Es是否包含相似字段
+    public SearchHit selectDataByTitle(String fieldStr) throws ParseException {
+
+        SearchResponse response = client.prepareSearch(index)
+                .setTypes(type)
+                .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
+                .setQuery(QueryBuilders.matchQuery("title", fieldStr).minimumShouldMatch("100%"))//相似度查询
+                .execute().actionGet();
+        SearchHits searchHits = response.getHits();
+        SearchHit sh = null;
+        for(SearchHit searchHit : searchHits){
+            String t = (String)searchHit.getSource().get("title");
+            if(t.length() == fieldStr.length()){
+                sh = searchHit;
+            }
+        }
+        return  sh;
+    }
+
     //根据ID删除文档
     public void deleteById(String id){
         DeleteResponse response = client.prepareDelete(index,type,id).get();
@@ -155,6 +175,20 @@ public class ElasticUtil {
             size = searchHits.getHits().length;
         }
         return ids;
+    }
+
+    //查询并删除
+    public void searchDelete(String timeStart,String timeEnd){
+        BulkByScrollResponse response =
+                DeleteByQueryAction.INSTANCE.newRequestBuilder(client)
+                .filter(QueryBuilders.rangeQuery("time_spider")//时间过滤
+                        .gte(timeStart + " 00:00:00")
+                        .lte(timeEnd + " 00:00:00"))
+                .source(index)
+                .get();
+
+        long num = response.getDeleted();
+        System.out.println("删掉ES" + num +"条数据");
     }
 
     public String CreateNews(News news) {
@@ -210,9 +244,6 @@ public class ElasticUtil {
         SearchResponse response = client.prepareSearch(index)
                 .setTypes(type)
                 .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
-//                .setPostFilter(QueryBuilders.rangeQuery("time_spider")//时间过滤
-//                        .gte(getTime(System.currentTimeMillis() - 3 * 30 * 24 * 60 * 60 * 1000L))
-//                        .lte(getTime(System.currentTimeMillis())))
                 .setQuery(QueryBuilders.matchQuery(field, fieldStr).minimumShouldMatch(percent))//相似度查询
                 .execute().actionGet();
         return response.getHits();
@@ -256,5 +287,19 @@ public class ElasticUtil {
             size = searchHits.getHits().length;
         }
         return hitSet;
+    }
+
+    //查找相似度的新闻标题
+    public SearchHits searchSomeLike(String field,String fieldStr,String percent){
+        SearchResponse response = client.prepareSearch(index)
+                .setTypes(type)
+                .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
+                .setSize(50)
+                .setPostFilter(QueryBuilders.rangeQuery("time_spider")//时间过滤
+                        .gte(getTime(System.currentTimeMillis() - 3 * 30 * 24 * 60 * 60 * 1000L))
+                        .lte(getTime(System.currentTimeMillis())))
+                .setQuery(QueryBuilders.matchQuery(field, fieldStr).minimumShouldMatch(percent))//相似度查询
+                .execute().actionGet();
+        return response.getHits();
     }
 }
