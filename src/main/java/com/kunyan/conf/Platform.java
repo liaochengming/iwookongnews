@@ -24,7 +24,7 @@ public enum Platform {
     CFI(16, "中国财经信息网"),
     ZhONG_ZhENG(17, "中证网"),
     CN_STOCK(18, "上海证券报"),
-    STCN(19, "证券时报·网中国"),
+    STCN(19, "证券时报网·中国"),
     XIN_HUA(20, "新华网财经"),
     FENG_HUANG(21, "凤凰财经"),
     SINA(22, "新浪财经"),

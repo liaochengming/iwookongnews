@@ -39,9 +39,10 @@ public class InputESThread implements Runnable {
         List<String> remark;
         String tags;
         String timeSpider;
+        List<String> showcase;
 
         arr = data.split("<=");
-        if (arr.length == 18) {
+        if (arr.length == 19) {
 
             newsType = arr[4];
             newsTitle = arr[5];
@@ -61,12 +62,15 @@ public class InputESThread implements Runnable {
             remark = getList(arr[15]);
             tags = arr[16];
             timeSpider = arr[17];
+            showcase = getList(arr[18]);
 
             News news = new News(newsType, newsTitle, newsSummary,
                     site, newsUrl, newsDate,
                     newsTime, industries, sections,
                     stocks, positiveRate, neutralRate,
-                    passiveRate, newsBody, related, remark, tags, newsUrl, timeSpider);
+                    passiveRate, newsBody, related,
+                    remark, tags, newsUrl,
+                    timeSpider,showcase);
             try {
                 if (!esTitleExist(newsTitle, elasticUtil, Integer.valueOf(newsType))) {
                     if (!esContentExist(newsTitle, newsBody, elasticUtil, newsUrl)) {

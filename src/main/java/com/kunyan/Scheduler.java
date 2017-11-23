@@ -235,6 +235,9 @@ public class Scheduler {
 
         List<String> list = new ArrayList<String>();
         String[] arr = str.replace("[", "").replace("]", "").split(",");
+        if(arr[0].equals("") || arr[0].equals("null")){
+            return null;
+        }
         Collections.addAll(list, arr);
         return list;
     }

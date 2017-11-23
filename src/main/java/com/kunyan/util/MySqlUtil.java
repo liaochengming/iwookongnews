@@ -1,7 +1,9 @@
 package com.kunyan.util;
 
 
+
 import java.sql.*;
+
 
 /**
  * Created by Administrator on 2017/9/11.
@@ -10,7 +12,7 @@ import java.sql.*;
 public class MySqlUtil {
 
 
-    public static Connection getMysqlConn(String url,String userName,String passWord){
+    public static Connection getMysqlConn(String url, String userName, String passWord){
 
         try {
             Class.forName("com.mysql.jdbc.Driver");
@@ -26,7 +28,7 @@ public class MySqlUtil {
 
     }
 
-    public static ResultSet getMysqlData(Connection conn,String selectStr) {
+    public static ResultSet getMysqlData(Connection conn, String selectStr) {
 
         PreparedStatement ppst = null;
         try {

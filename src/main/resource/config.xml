@@ -30,4 +30,10 @@
         <index>news</index>
         <type>real_news</type>
     </es>
+    <redis>
+        <host>192.168.1.111</host>
+        <port>7481</port>
+        <auth>62smMg3</auth>
+        <db>3</db>
+    </redis>
 </xml>

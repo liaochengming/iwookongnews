@@ -44,6 +44,8 @@ public class DisposeDataThread implements Runnable {
         String section = "";//板块
         String stock = "";//股票
 
+        String showcase = "";//展示平台
+
         String[] date;
         String rowKey;
         long timeStamp ;
@@ -76,6 +78,7 @@ public class DisposeDataThread implements Runnable {
                     byte[] bTimeSpider = result.getValue(Bytes.toBytes("basic"), Bytes.toBytes("time_spider"));
                     byte[] bUrl = result.getValue(Bytes.toBytes("basic"), Bytes.toBytes("url"));
                     byte[] bRemark = result.getValue(Bytes.toBytes("basic"), Bytes.toBytes("remark"));
+                    byte[] bShowcase = result.getValue(Bytes.toBytes("basic"), Bytes.toBytes("showcase"));
 
                     if (bArticleType == null) bArticleType = new byte[]{};
                     if (bContent == null) bContent = new byte[]{};
@@ -85,12 +88,16 @@ public class DisposeDataThread implements Runnable {
                     if (bTimeSpider == null) bTimeSpider = new byte[]{};
                     if (bUrl == null) bUrl = new byte[]{};
                     if (bRemark == null) bRemark = new byte[]{};
+                    if(bShowcase == null) bShowcase = new byte[]{};
 
                     articleType = Bytes.toString(bArticleType);
                     content = Bytes.toString(bContent);
                     related = Bytes.toString(bRelated);
                     tags = Bytes.toString(bTags);
-
+                    showcase = Bytes.toString(bShowcase);
+                    if(showcase.equals("")){
+                        showcase = "null";
+                    }
                     if(!tags.equals("公司详情")){
                         time = Bytes.toString(bTime);
                         timeSpider = Bytes.toString(bTimeSpider);
@@ -205,7 +212,7 @@ public class DisposeDataThread implements Runnable {
                             }
                             String otherInfo = newsType + "<=" + title + "<=" + summary + "<=" + getPlatformName(platformInt) +
                                     "<=" + date[0] + "<=" + date[1] + "<=" + industry + "<=" + section + "<=" + stock + "<=" +
-                                    content + "<=" + related + "<=" + remark + "<=" + tags + "<=" + timeSpider;
+                                    content + "<=" + related + "<=" + remark + "<=" + tags + "<=" + timeSpider + "<=" + showcase + "<=";
 
                             String newTitle = SegmentHan.segmentReturnString(title, false);
                             ProducerRecord<String, String> producerRecord =

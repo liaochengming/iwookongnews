@@ -14,12 +14,15 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.script.Script;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.xpack.client.PreBuiltXPackTransportClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,6 +77,7 @@ public class ElasticUtil {
         uRequest.id(id);
         try {
             uRequest.doc(json, XContentType.JSON);
+//            uRequest.upsert(json, XContentType.JSON).script(new Script("ctx._source.name_of_new_field = \"showcase\""));
             client.update(uRequest).get();
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -144,16 +148,14 @@ public class ElasticUtil {
     }
 
     //查询时间范围内的所有文档ID
-    public Set<String> searchIds(String timeStart,String timeEnd) throws ExecutionException, InterruptedException {
+    public Set<String> searchIds() throws ExecutionException, InterruptedException {
         Set<String> ids = new HashSet<String>();
         SearchResponse response = client.prepareSearch(index)
                 .setTypes(type)
                 .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
                 .setSize(1000)
                 .setScroll(TimeValue.timeValueMinutes(8))
-                .setPostFilter(QueryBuilders.rangeQuery("time_spider")//时间过滤
-                        .gte(timeStart + " 00:00:00")
-                        .lte(timeEnd + " 00:00:00"))
+                .setPostFilter(QueryBuilders.boolQuery().mustNot(QueryBuilders.existsQuery("showcase")))
                 .get();
         //第一个集合
         SearchHits searchHits = response.getHits();
@@ -262,10 +264,43 @@ public class ElasticUtil {
                 .setTypes(type)
                 .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
                 .setSize(1000)
+                .setFetchSource(new String[]{"industries","sections","stocks","remarks","showcase"},new String[]{})
                 .setScroll(TimeValue.timeValueMinutes(8))
                 .setPostFilter(QueryBuilders.rangeQuery("time_spider")//时间过滤
-                        .gte(timeStart)
-                        .lte(timeEnd))
+                        .gte(timeStart + " 00:00:00")
+                        .lte(timeEnd+ " 00:00:00"))
+                .get();
+        //第一个集合
+        SearchHits searchHits = response.getHits();
+        for(SearchHit searchHit : searchHits){
+            hitSet.add(searchHit);
+        }
+        System.out.println(searchHits.getTotalHits());
+
+        String scrollId = response.getScrollId();
+        int size = searchHits.getHits().length;
+        while(size != 0){
+            response = client.prepareSearchScroll(scrollId)
+                    .setScroll(TimeValue.timeValueMinutes(8)).get();
+            searchHits = response.getHits();
+            for(SearchHit searchHit : searchHits){
+                hitSet.add(searchHit);
+            }
+            scrollId = response.getScrollId();
+            size = searchHits.getHits().length;
+        }
+        return hitSet;
+    }
+
+    public Set<SearchHit> getAllData(){
+        Set<SearchHit> hitSet = new HashSet<SearchHit>();
+        SearchResponse response = client.prepareSearch(index)
+                .setTypes(type)
+                .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
+                .setSize(1000)
+                .setFetchSource(new String[]{"title","body"},new String[]{})
+                .setScroll(TimeValue.timeValueMinutes(8))
+                .setPostFilter(QueryBuilders.boolQuery().mustNot(QueryBuilders.existsQuery("showcase")))
                 .get();
         //第一个集合
         SearchHits searchHits = response.getHits();
@@ -301,5 +336,38 @@ public class ElasticUtil {
                 .setQuery(QueryBuilders.matchQuery(field, fieldStr).minimumShouldMatch(percent))//相似度查询
                 .execute().actionGet();
         return response.getHits();
+    }
+
+
+    public Set<SearchHit> getSoHuData(){
+        Set<SearchHit> hitSet = new HashSet<SearchHit>();
+        SearchResponse response = client.prepareSearch(index)
+                .setTypes(type)
+                .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
+                .setSize(1000)
+                .setScroll(TimeValue.timeValueMinutes(8))
+                .setPostFilter(QueryBuilders.boolQuery().must(QueryBuilders.termQuery("site","搜狐财经"))
+                .must(QueryBuilders.regexpQuery("url","http://.*163.com.*")))
+                .get();
+        //第一个集合
+        SearchHits searchHits = response.getHits();
+        for(SearchHit searchHit : searchHits){
+            hitSet.add(searchHit);
+        }
+        System.out.println(searchHits.getTotalHits());
+
+        String scrollId = response.getScrollId();
+        int size = searchHits.getHits().length;
+        while(size != 0){
+            response = client.prepareSearchScroll(scrollId)
+                    .setScroll(TimeValue.timeValueMinutes(8)).get();
+            searchHits = response.getHits();
+            for(SearchHit searchHit : searchHits){
+                hitSet.add(searchHit);
+            }
+            scrollId = response.getScrollId();
+            size = searchHits.getHits().length;
+        }
+        return hitSet;
     }
 }

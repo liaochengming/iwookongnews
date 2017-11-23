@@ -29,6 +29,7 @@ public class ImportHistoricalData {
     static String[] date;
     static String content="";
     static News news;
+    static String showcase = "";
     static ElasticUtil elasticUtil;
 
 
@@ -71,6 +72,7 @@ public class ImportHistoricalData {
                     date = Scheduler.getTime(resultSet.getString("news_time")).replaceAll(" ","").split(" ");
                     newsDate = date[0];
                     newsTime = date[1];
+                    showcase = resultSet.getString("showcase");
 
                     //快讯无正文
                     if(!type.equals("1")){
@@ -113,7 +115,8 @@ public class ImportHistoricalData {
                             true,new ArrayList<String>(),
                             "",
                             newsUrl,
-                            Scheduler.getTime(resultSet.getString("updated_time")));
+                            Scheduler.getTime(resultSet.getString("updated_time")),
+                            Scheduler.getList(showcase));
                     Scheduler.insertES(news, elasticUtil);
                 }
             }

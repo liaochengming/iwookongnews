@@ -46,13 +46,14 @@ public class News {
     @JsonProperty(value = "news_id")
     private String newsId;//暂存新闻url
 
+    private List<String> showcase;//新闻展示平台
 
     public News(String type, String title, String summary,
                 String site, String url, String newsDate,
                 String newsTime, List<String> industries, List<String> sections,
                 List<String> stocks, float positiveRate, float neutralRate,
-                float passiveRate, String content,boolean related,List<String> remarks,
-                String tags,String newsId,String timeSpider) {
+                float passiveRate, String content, boolean related, List<String> remarks,
+                String tags, String newsId, String timeSpider, List<String> showcase) {
         this.type = type;
         this.title = title;
         this.summary = summary;
@@ -72,6 +73,7 @@ public class News {
         this.tags = tags;
         this.newsId = newsId;
         this.timeSpider = timeSpider;
+        this.showcase = showcase;
     }
 
     public String getType() {
@@ -224,6 +226,14 @@ public class News {
 
     public void setNewsId(String newsId) {
         this.newsId = newsId;
+    }
+
+    public List<String> getShowcase() {
+        return showcase;
+    }
+
+    public void setShowcase(List<String> showcase) {
+        this.showcase = showcase;
     }
 
 }
