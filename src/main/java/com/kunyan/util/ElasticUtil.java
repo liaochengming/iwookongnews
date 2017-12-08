@@ -94,7 +94,10 @@ public class ElasticUtil {
                 .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
                 .setQuery(QueryBuilders.matchQuery("url", url))
                 .execute().actionGet();
-        return response.getHits().getAt(0).getId();
+        if(response.getHits().totalHits > 0){
+            return response.getHits().getAt(0).getId();
+        }
+        return "";
     }
 
     //查找Es是否包含相似字段
@@ -264,11 +267,13 @@ public class ElasticUtil {
                 .setTypes(type)
                 .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
                 .setSize(1000)
-                .setFetchSource(new String[]{"industries","sections","stocks","remarks","showcase"},new String[]{})
+                .setFetchSource(new String[]{"title","body","type"},new String[]{})
                 .setScroll(TimeValue.timeValueMinutes(8))
+                .setQuery(QueryBuilders.termsQuery("type","3","4"))
                 .setPostFilter(QueryBuilders.rangeQuery("time_spider")//时间过滤
                         .gte(timeStart + " 00:00:00")
                         .lte(timeEnd+ " 00:00:00"))
+                .setPostFilter(QueryBuilders.boolQuery().mustNot(QueryBuilders.existsQuery("url_cdn")))
                 .get();
         //第一个集合
         SearchHits searchHits = response.getHits();

@@ -4,6 +4,7 @@
         <zookeeper>192.168.1.106:2181,192.168.1.107:2181,192.168.1.108:2181</zookeeper>
         <groupId>1989</groupId>
         <newsreceive>new_news</newsreceive>
+        <newsreceive_update>new_news_update</newsreceive_update>
         <sentiment_back>sentiment_back</sentiment_back>
         <sentiment_send>sentiment_send</sentiment_send>
         <brokerList>192.168.1.104:9092,192.168.1.105:9092,192.168.1.106:9092,192.168.1.107:9092,192.168.1.108:9092</brokerList>
@@ -34,6 +35,14 @@
         <host>192.168.1.111</host>
         <port>7481</port>
         <auth>62smMg3</auth>
-        <db>3</db>
+        <db>8</db>
     </redis>
+    <mysql_image>
+        <url>jdbc:mysql://192.168.2.102:3306/keyword_image?userUnicode=true&amp;characterEncoding=utf-8&amp;noAccessToProcedureBodies=true&amp;autoReconnect=true</url>
+        <user>root</user>
+        <password>221spider</password>
+    </mysql_image>
+    <path>
+        <custom_dict>D:\javaUtil-jar\CustomDict.txt</custom_dict>
+    </path>
 </xml>

@@ -61,7 +61,8 @@ public class Scheduler {
             elasticUtil = new ElasticUtil(doc);
 
             String mysqlStockUrl = doc.selectSingleNode("xml/mysql/parseUrl").getText();
-            easyParser = EasyParser.apply(mysqlStockUrl);
+            String dictPath = doc.selectSingleNode("xml/path/custom_dict").getText();
+            easyParser = EasyParser.apply(mysqlStockUrl,dictPath);
 
             String groupId = doc.selectSingleNode("xml/kafka/groupId").getText();
 //            String newsReceive = doc.selectSingleNode("xml/kafka/newsreceive").getText();
