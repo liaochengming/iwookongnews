@@ -7,7 +7,8 @@ import com.kunyan.Scheduler;
 import com.kunyan.conf.Platform;
 import com.kunyan.util.ElasticUtil;
 import com.kunyan.util.MyHbaseUtil;
-import com.nlp.util.EasyParser;
+import com.nlp.EasyParser;
+import com.nlp.util.SegmentHan;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -135,7 +136,7 @@ public class UpdateEsThread implements Runnable{
         if (!content.equals("")) {
 
             try {
-                summary = easyParser.getSummary(title, content);
+                summary = SegmentHan.getSummary(title, content);
             } catch (Exception e) {
                 e.printStackTrace();
             }

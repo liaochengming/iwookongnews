@@ -4,7 +4,7 @@ package com.kunyan.test;
 import com.kunyan.util.MySqlUtil;
 import com.nlp.GetInfo;
 import com.nlp.NewsInfo;
-import com.nlp.util.EasyParser;
+import com.nlp.EasyParser;
 import de.mwvb.base.xml.XMLDocument;
 
 import java.sql.Connection;

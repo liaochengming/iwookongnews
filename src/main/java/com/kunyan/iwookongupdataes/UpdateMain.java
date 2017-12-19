@@ -3,7 +3,7 @@ package com.kunyan.iwookongupdataes;
 import com.kunyan.thread.UpdateEsThread;
 import com.kunyan.util.ElasticUtil;
 import com.kunyan.util.MyHbaseUtil;
-import com.nlp.util.EasyParser;
+import com.nlp.EasyParser;
 import de.mwvb.base.xml.XMLDocument;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
